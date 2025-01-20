@@ -14,16 +14,19 @@ RUN npm install
 COPY . .
 
 # Baue die React-Anwendung für die Produktion
-RUN npm run build
+#RUN npm run build
 
 # Verwende ein Nginx-Image, um die gebaute Anwendung bereitzustellen
-FROM nginx:alpine
+#FROM registry.access.redhat.com/ubi9/nginx-120
 
 # Kopiere die gebaute Anwendung in den Nginx-Server
-COPY --from=build /app/build /usr/share/nginx/html
+#COPY --from=build /app/build /usr/share/nginx/html
 
-# Exponiere den Port 80
-EXPOSE 80
+# Exponiere den Port 3000
+EXPOSE 3000
+
+# Definiere den Befehl zum Starten der Anwendung
+CMD ["npm", "start"]
 
 # Starte Nginx im Vordergrund
-CMD ["nginx", "-g", "daemon off;"]
+#CMD ["nginx", "-g", "daemon off;"]

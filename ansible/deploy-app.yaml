@@ -3,7 +3,7 @@
   hosts: localhost
   vars_files:
     - vars/vars.yml
-    - vault/vault.yml
+    - next/user.yml
   
   tasks:
     - name: Ensure an access token is retrieved for the admin user
@@ -35,7 +35,8 @@
   tasks:
 
     - name: Create OpenShift project (namespace)
-      community.kubernetes.k8s:
+      kubernetes.core.k8s:
+        validate_certs: false
         state: present
         definition:
           apiVersion: v1
@@ -43,53 +44,57 @@
           metadata:
             name: my-app-project
 
-    - name: Define the S2I BuildConfig
-      community.kubernetes.k8s:
-        state: present
-        definition:
-          apiVersion: build.openshift.io/v1
-          kind: BuildConfig
-          metadata:
-            name: my-app-backend
-            namespace: my-app-project
-          spec:
-            source:
-              type: Git
-              git:
-                uri: "https://<git-repository-url>"
-            strategy:
-              type: Source
-              sourceStrategy:
-                from:
-                  kind: ImageStreamTag
-                  name: "to-do-backend:1.0"
-                  namespace: openshift
-            output:
-              to:
-                kind: ImageStreamTag
-                name: "my-app:latest"
-            triggers:
-              - type: ConfigChange
-              - type: GitHub
-                github:
-                  secret: <webhook-secret>
+#    - name: Define the S2I BuildConfig
+#      kubernetes.core.k8s:
+#        validate_certs: false
+#        state: present
+#        definition:
+#          apiVersion: build.openshift.io/v1
+#          kind: BuildConfig
+#          metadata:
+#            name: my-app-backend
+#            namespace: my-app-project
+#          spec:
+#            source:
+#              type: Git
+#              git:
+#                uri: "https://github.com/markusroth1/argocd-pipline-demo.git"
+#              contextDir: /app/backend
+#           strategy:
+#              type: Source
+#              sourceStrategy:
+#                from:
+#                  kind: ImageStreamTag
+#                  name: "backend:1.0"
+#                  namespace: openshift
+#            output:
+#              to:
+#                kind: ImageStreamTag
+#                name: "my-app-backend:1.0"
+#            triggers:
+#              - type: ConfigChange
+#              - type: GitHub
+#                github:
+#                  secret: <webhook-secret>
 
-    - name: Define the ImageStream for the application
-      community.kubernetes.k8s:
-        state: present
-        definition:
-          apiVersion: image.openshift.io/v1
-          kind: ImageStream
-          metadata:
-            name: my-app-backend
-            namespace: my-app-project
+#    - name: Define the ImageStream for the application
+#      kubernetes.core.k8s:
+#        validate_certs: false
+#        state: present
+#        definition:
+#          apiVersion: image.openshift.io/v1
+#          kind: ImageStream
+#          metadata:
+#            name: my-app-backend
+#            namespace: my-app-project
 
-    - name: Deploy application using DeploymentConfig
-      community.kubernetes.k8s:
+    - name: Deploy application using Deployment
+      kubernetes.core.k8s:
+        validate_certs: false
         state: present
         definition:
           apiVersion: apps.openshift.io/v1
-          kind: DeploymentConfig
+          kind: Deployment
           metadata:
             name: my-app-backend
             namespace: my-app-project
@@ -104,7 +109,7 @@
               spec:
                 containers:
                   - name: my-app-backend
-                    image: "to-do-backend:latest"
+                    image: "my-app-backend:1.0"
                     imagePullPolicy: Always
                     ports:
                       - containerPort: 8080
@@ -120,7 +125,8 @@
               - type: ConfigChange
 
     - name: Expose the application via a route
-      community.kubernetes.k8s:
+      kubernetes.core.k8s:
+        validate_certs: false
         state: present
         definition:
           apiVersion: route.openshift.io/v1
@@ -136,7 +142,8 @@
               targetPort: 8080
 
     - name: Verify the route and display URL
-      community.kubernetes.k8s_info:
+      kubernetes.core.k8s_info:
+        validate_certs: false
         api_version: route.openshift.io/v1
         kind: Route
         name: my-app-backend
