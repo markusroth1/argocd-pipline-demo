@@ -1,0 +1,148 @@
+---
+- name: Logging in to Openshift
+  hosts: localhost
+  vars_files:
+    - vars/vars.yml
+    - vault/vault.yml
+  
+  tasks:
+    - name: Ensure an access token is retrieved for the admin user
+      community.okd.openshift_auth:
+        host: '{{ ocp4_api_url }}'
+        username: "{{ ocp4_kubeadmin }}"
+        password: "{{ ocp4_kubeadmin_pw }}"
+        validate_certs: false
+      register: auth_results
+
+- name: Deploy Application in OpenShift using Ansible K8s modules
+  hosts: localhost
+  gather_facts: false
+  connection: local
+  vars_files:
+    - vars/vars.yml
+    - vault/vault.yml
+  
+  module_defaults:
+    group/community.okd.okd:
+      namespace: openshift-config
+      api_key: "{{ auth_results['openshift_auth']['api_key'] }}"
+      host: '{{ ocp4_api_url }}'
+    group/kubernetes.core.k8s:
+      namespace: openshift-config
+      api_key: "{{ auth_results['openshift_auth']['api_key'] }}"
+      host: '{{ ocp4_api_url }}'
+
+  tasks:
+
+    - name: Create OpenShift project (namespace)
+      community.kubernetes.k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: Namespace
+          metadata:
+            name: my-app-project
+
+    - name: Define the S2I BuildConfig
+      community.kubernetes.k8s:
+        state: present
+        definition:
+          apiVersion: build.openshift.io/v1
+          kind: BuildConfig
+          metadata:
+            name: my-app-backend
+            namespace: my-app-project
+          spec:
+            source:
+              type: Git
+              git:
+                uri: "https://<git-repository-url>"
+            strategy:
+              type: Source
+              sourceStrategy:
+                from:
+                  kind: ImageStreamTag
+                  name: "to-do-backend:1.0"
+                  namespace: openshift
+            output:
+              to:
+                kind: ImageStreamTag
+                name: "my-app:latest"
+            triggers:
+              - type: ConfigChange
+              - type: GitHub
+                github:
+                  secret: <webhook-secret>
+
+    - name: Define the ImageStream for the application
+      community.kubernetes.k8s:
+        state: present
+        definition:
+          apiVersion: image.openshift.io/v1
+          kind: ImageStream
+          metadata:
+            name: my-app-backend
+            namespace: my-app-project
+
+    - name: Deploy application using DeploymentConfig
+      community.kubernetes.k8s:
+        state: present
+        definition:
+          apiVersion: apps.openshift.io/v1
+          kind: DeploymentConfig
+          metadata:
+            name: my-app-backend
+            namespace: my-app-project
+          spec:
+            replicas: 1
+            selector:
+              app: my-app-backend
+            template:
+              metadata:
+                labels:
+                  app: my-app-backend
+              spec:
+                containers:
+                  - name: my-app-backend
+                    image: "to-do-backend:latest"
+                    imagePullPolicy: Always
+                    ports:
+                      - containerPort: 8080
+            triggers:
+              - type: ImageChange
+                imageChangeParams:
+                  automatic: true
+                  containerNames:
+                    - my-app-backend
+                  from:
+                    kind: ImageStreamTag
+                    name: "to-do-backend:latest"
+              - type: ConfigChange
+
+    - name: Expose the application via a route
+      community.kubernetes.k8s:
+        state: present
+        definition:
+          apiVersion: route.openshift.io/v1
+          kind: Route
+          metadata:
+            name: my-app
+            namespace: my-app-project
+          spec:
+            to:
+              kind: Service
+              name: my-app-backend
+            port:
+              targetPort: 8080
+
+    - name: Verify the route and display URL
+      community.kubernetes.k8s_info:
+        api_version: route.openshift.io/v1
+        kind: Route
+        name: my-app-backend
+        namespace: my-app-project
+      register: route_info
+
+    - name: Show application route
+      ansible.builtin.debug:
+        msg: "Application deployed at: http://{{ route_info.resources[0].spec.host }}"

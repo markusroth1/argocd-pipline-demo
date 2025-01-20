@@ -1,0 +1,80 @@
+---
+#### Cluster Vars
+cluster_name: 'crc'
+ocp4_base_domain: 'testing'
+kubeconfig: "{{ user_path }}/auth/kubeconfig"
+local_kubeconfig: '~/.kube/config'
+ocp4_api_url: 'https://api.{{ cluster_name }}.{{ ocp4_base_domain }}:6443'
+ansible_user: markus
+user_path: '/home/markus'
+#### Install Vars
+
+#### Post Install Vars
+#only_post_install: True
+only_post_install: False
+ocp_api_url: api.crc.testing
+
+# OAuth
+#oauth: htpasswd
+oauth: htpasswd
+ocp4_htpasswd_admin_user: admin
+ocp4_htpasswd_dev_user: developer
+ocp4_htpasswd_file: '{{ user_path }}/htpasswd_file'
+IDP_local: localuser
+
+ocp4_remove_kubeadmin: False
+removeselfprovisioning: True
+
+# Logging
+
+# Monitoring
+
+# Registry
+registry: True
+
+# ProjectRequestTemplate
+project_request_template: True
+project_request_message: "To provision namespace ask to Openshift 4 Administrators"
+install_limit_range: True
+install_network_policies: True
+install_resource_quota: True
+project_request_template_project_limits:
+  - type: Container
+    max:
+      cpu: 2
+      memory: 2Gi
+    default:
+      cpu: 500m
+      memory: 500Mi
+    defaultRequest:
+      cpu: 50m
+      memory: 256Mi
+  - type: Pod
+    max:
+      cpu: 2
+      memory: 4Gi
+
+project_request_template_resource_quota:
+  pods: 10
+  requests.cpu: 4000m
+  requests.memory: 8Gi
+  resourcequotas: 1
+  requests.storage: 50Gi
+  persistentvolumeclaims: 5
+
+### Cert Manager
+
+### Extra DevOps Or RH Tools
+
+# ArgoCD
+argocd: True
+argoclient: False
+argocd_version: v1.8.7
+git_repo_url: https://github.com/markusroth1/openshift.git
+
+# ServiceMesh
+service_mesh: False
+
+# ACS
+acs: True
+acs_demo: False

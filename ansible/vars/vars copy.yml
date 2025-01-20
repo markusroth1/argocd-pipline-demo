@@ -1,0 +1,153 @@
+---
+#### Cluster Vars
+ocp4_version: '4.13.0'
+cloud_provider: 'ec2'
+cluster_name: 'ocp'
+ocp4_base_domain: 'demo.shnsu.bechtle.com'
+#aws_region: eu-central-1
+master_instance_type: m5.xlarge
+master_instance_count: 3
+worker_instance_type: m5.xlarge
+worker_instance_count: 3
+#kubeconfig: '~/.kube/ocp4-opentlc2'
+machineCIDR: "10.0.0.0/16"
+kubeconfig: "{{ user_path }}/auth/kubeconfig"
+local_kubeconfig: '~/.kube/config'
+ocp4_api_url: 'https://api.{{ cluster_name }}.{{ ocp4_base_domain }}:6443'
+ansible_user: admin
+user_path: '/home/admin'
+#### Only in Tower-mode
+tower_used: False
+
+#### Install Vars
+awscli_download: True
+prereqs: True
+uninstall_ocp: False # VERY CAREFUL WITH THIS VAR :)
+
+#### Post Install Vars
+#only_post_install: True
+only_post_install: False
+ocp_api_url: api.ocp.demo.shnsu.bechtle.com
+
+# Worker Nodes
+worker_nodes: True
+
+# Infra Nodes
+infra_nodes: True
+infra_disk_size: 1024
+infra_instance_type: m5.xlarge
+
+# NTP Settings
+chrony_config: |
+      pool 0.rhel.pool.ntp.org iburst
+      driftfile /var/lib/chrony/drift
+      makestep 1.0 3
+      rtcsync
+      logdir /var/log/chrony
+      
+# ELK infra nodes
+elk_nodes: False
+
+# OAuth
+#oauth: htpasswd
+oauth: htpasswd
+ocp4_htpasswd_admin_user: admin
+ocp4_htpasswd_dev_user: developer
+ocp4_htpasswd_file: '{{ user_path }}/htpasswd_file'
+IDP_local: localuser
+
+#oauth: LDAP/AD
+ocp4_idm_ldap_type: AD
+ocp4_idm_ldap_root: demo.shnsu.bechtle.com
+ocp4_idm_ldap_domain_controller: demo.shnsu.bechtle.com
+ocp4_idm_ldap_domain: demo.shnsu.bechtle.com
+ocp4_idm_ldap_port: 636
+# bind_password: Defind in vault.yaml
+# bind_DN: Defind in vault.yaml
+ocp4_idm_ldap_url: ldaps://demo.shnsu.bechtle.com/ou=_DEMONSU,dc=demo,dc=shnsu,dc=bechtle,dc=com?sAMAccountName
+ocp4_idm_ldap_ca_certificate: "ca.crt"
+
+ocp4_remove_kubeadmin: False
+removeselfprovisioning: True
+
+# Logging
+logging: True
+clo_node_selector: "node-role.kubernetes.io/infra="
+es_channel: stable #Define the ES version of the operator
+clo_channel: stable #Define the ClusterLogging version of the operator
+
+# Monitoring
+monitoring: True
+prom_retention: 4w
+prometheus_gp2_storage: 40Gi
+alertmanager_gp2_storage: 40Gi
+
+# Registry
+registry: True
+
+# ProjectRequestTemplate
+project_request_template: True
+project_request_message: "To provision namespace ask to Openshift 4 Administrators"
+install_limit_range: True
+install_network_policies: True
+install_resource_quota: True
+project_request_template_project_limits:
+  - type: Container
+    max:
+      cpu: 2
+      memory: 2Gi
+    default:
+      cpu: 500m
+      memory: 500Mi
+    defaultRequest:
+      cpu: 50m
+      memory: 256Mi
+  - type: Pod
+    max:
+      cpu: 2
+      memory: 4Gi
+
+project_request_template_resource_quota:
+  pods: 10
+  requests.cpu: 4000m
+  requests.memory: 8Gi
+  resourcequotas: 1
+  requests.storage: 50Gi
+  persistentvolumeclaims: 5
+
+### Cert Manager
+cmanager: true
+cmanager_namespace: cert-manager
+cmanager_aws_region: eu-west-1
+cmanager_email_admin: rcarrata@redhat.com
+cmanager_nodeselector: worker
+cmanager_aws_role_name: ocp_cert_manager
+cmanager_aws_user: ocp_cert_manager
+cmanager_default_certificate: default
+cmanager_cert_routes:
+#  - { route_name: 'internal',
+#        hostname: 'internal.{{ cluster_name }}.{{ ocp4_base_domain }}' }
+  - { route_name: 'default',
+        hostname: 'apps.{{ cluster_name }}.{{ ocp4_base_domain }}' }
+#  - { route_name: 'publicapps',
+#        hostname: 'publicapps.{{ cluster_name }}.{{ ocp4_subdomain }}.{{ ocp4_base_domain }}' }
+cmanager_label: [OCP_POST-CMANAGER]
+# to disable operator choose absent
+# disabling operator doesnt remove the certificates
+cmanager_state: present
+cmanager_chart_version: v1.8.0
+ocp4_dnszone: '{{ cluster_name }}.{{ ocp4_base_domain }}'
+
+### Extra DevOps Or RH Tools
+
+# ArgoCD
+argocd: True
+argoclient: False
+argocd_version: v1.8.7
+
+# ServiceMesh
+service_mesh: False
+
+# ACS
+acs: True
+acs_demo: False
