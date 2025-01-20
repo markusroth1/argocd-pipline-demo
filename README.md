@@ -14,14 +14,7 @@ This repository contains an Ansible playbook and the source code for deploying a
 
 ## Repository Structure
 
-. ├── ansible/ 
-  │           ├── playbook.yml # Main Ansible playbook for OpenShift deployment 
-  │           └── inventory # Inventory file (if needed for remote clusters) 
-  ├── app/  
-  │       ├── src/ # Source code of the application 
-  │       ├── Dockerfile # Dockerfile (optional, for custom builds)  
-  │       └── README.md # Documentation for the application 
-  └── README.md # This file
+. ├── ansible/ │ ├── playbook.yml # Main Ansible playbook for OpenShift deployment │ └── inventory # Inventory file (if needed for remote clusters) ├── app/ │ ├── src/ # Source code of the application │ ├── Dockerfile # Dockerfile (optional, for custom builds) │ └── README.md # Documentation for the application └── README.md # This file
 
 ## Prerequisites
 
