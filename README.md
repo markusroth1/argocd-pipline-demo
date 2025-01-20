@@ -13,9 +13,20 @@ This repository contains an Ansible playbook and the source code for deploying a
 - Fully customizable for other applications or configurations.
 
 ## Repository Structure
-
-. ├── ansible/ │ ├── playbook.yml # Main Ansible playbook for OpenShift deployment │ └── inventory # Inventory file (if needed for remote clusters) ├── app/ │ ├── src/ # Source code of the application │ ├── Dockerfile # Dockerfile (optional, for custom builds) │ └── README.md # Documentation for the application └── README.md # This file
-
+```bash
+.
+├── ansible                # Main Ansible playbook for OpenShift deployment 
+│   ├── next
+│   └── vars
+├── app                     
+│    ├── backend            # Source code of the backend application
+│    │   └── node_modules
+│    └── frontend
+│        ├── node_modules
+│        ├── public
+│        └── src            # Source code of the frontend application
+└── README.md               # This file
+```
 ## Prerequisites
 
 1. **OpenShift Cluster**: Ensure you have access to an OpenShift cluster.
