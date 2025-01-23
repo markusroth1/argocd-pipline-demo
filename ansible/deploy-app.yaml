@@ -44,87 +44,128 @@
           metadata:
             name: my-app-project
 
-#    - name: Define the S2I BuildConfig
-#      kubernetes.core.k8s:
-#        validate_certs: false
-#        state: present
-#        definition:
-#          apiVersion: build.openshift.io/v1
-#          kind: BuildConfig
-#          metadata:
-#            name: my-app-backend
-#            namespace: my-app-project
-#          spec:
-#            source:
-#              type: Git
-#              git:
-#                uri: "https://github.com/markusroth1/argocd-pipline-demo.git"
-#              contextDir: /app/backend
-#           strategy:
-#              type: Source
-#              sourceStrategy:
-#                from:
-#                  kind: ImageStreamTag
-#                  name: "backend:1.0"
-#                  namespace: openshift
-#            output:
-#              to:
-#                kind: ImageStreamTag
-#                name: "my-app-backend:1.0"
-#            triggers:
-#              - type: ConfigChange
-#              - type: GitHub
-#                github:
-#                  secret: <webhook-secret>
 
-#    - name: Define the ImageStream for the application
-#      kubernetes.core.k8s:
-#        validate_certs: false
-#        state: present
-#        definition:
-#          apiVersion: image.openshift.io/v1
-#          kind: ImageStream
-#          metadata:
-#            name: my-app-backend
-#            namespace: my-app-project
-
-    - name: Deploy application using Deployment
+    - name: Deploy backend application using Deployment
       kubernetes.core.k8s:
         validate_certs: false
         state: present
         definition:
-          apiVersion: apps.openshift.io/v1
           kind: Deployment
+          apiVersion: apps/v1
           metadata:
-            name: my-app-backend
+            name: backend
             namespace: my-app-project
           spec:
             replicas: 1
             selector:
-              app: my-app-backend
+              matchLabels:
+                app: backend
             template:
               metadata:
                 labels:
-                  app: my-app-backend
+                  app: backend
+                  deployment: backend
               spec:
                 containers:
-                  - name: my-app-backend
-                    image: "my-app-backend:1.0"
-                    imagePullPolicy: Always
+                  - name: backend
+                    image: >-
+                      quay.io/markus_roth/automation/backend:1.0
                     ports:
-                      - containerPort: 8080
-            triggers:
-              - type: ImageChange
-                imageChangeParams:
-                  automatic: true
-                  containerNames:
-                    - my-app-backend
-                  from:
-                    kind: ImageStreamTag
-                    name: "to-do-backend:latest"
-              - type: ConfigChange
+                      - containerPort: 5000
 
-    - name: Expose the application via a route
+    - name: Expose the backend application with a service
+      kubernetes.core.k8s:
+        validate_certs: false
+        state: present
+        definition:
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: backend-service
+            namespace: my-app-project
+          spec:
+            selector:
+              app: backend
+            ports:
+              - protocol: TCP
+                port: 5000
+                targetPort: 5000
+
+    - name: Create a service account for the frontend app
+      kubernetes.core.k8s:
+        validate_certs: false
+        state: present
+        definition:
+          apiVersion: v1
+          kind: ServiceAccount
+          metadata:
+            name: my-sa
+            namespace: my-app-project
+
+    - name: Add SCC to Service Account using 'oc' command
+      command:
+        cmd: "oc adm policy add-scc-to-user anyuid -z my-sa -n my-app-project"
+
+
+    - name: Deploy frontend application using Deployment
+      kubernetes.core.k8s:
+        validate_certs: false
+        state: present
+        definition:
+          kind: Deployment
+          apiVersion: apps/v1
+          metadata:
+            name: frontend
+            namespace: my-app-project
+            labels:
+              app: frontend
+              app.kubernetes.io/component: frontend
+              app.kubernetes.io/instance: frontend
+              app.kubernetes.io/name: frontend
+              app.kubernetes.io/part-of: my-app
+              app.openshift.io/runtime-namespace: my-app-project
+          spec:
+            replicas: 1
+            selector:
+              matchLabels:
+                app: frontend
+            template:
+              metadata:
+                labels:
+                  app: frontend
+                  deployment: backend
+              spec:
+                serviceAccountName: my-sa
+                containers:
+                  - name: frontend
+                    image: >-
+                      quay.io/markus_roth/automation/frontend:1.0
+                    ports:
+                      - containerPort: 3000
+                env:
+                  - name: REACT_APP_API_BASE_URL
+                    value: "http://backend-service:5000"
+
+    - name: Expose the frontend application with a service
+      kubernetes.core.k8s:
+        validate_certs: false
+        state: present
+        definition:
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: frontend
+            namespace: my-app-project
+          spec:
+            selector:
+              app: frontend
+            ports:
+              - protocol: TCP
+                port: 3000
+                targetPort: 3000
+  
+    
+    - name: Expose the frontend application via a route
       kubernetes.core.k8s:
         validate_certs: false
         state: present
@@ -132,21 +173,22 @@
           apiVersion: route.openshift.io/v1
           kind: Route
           metadata:
-            name: my-app
+            name: my-frontend
             namespace: my-app-project
           spec:
+            host: my-frontend.apps-crc.testing
             to:
               kind: Service
-              name: my-app-backend
+              name: frontend
             port:
-              targetPort: 8080
+              targetPort: 3000
 
     - name: Verify the route and display URL
       kubernetes.core.k8s_info:
         validate_certs: false
         api_version: route.openshift.io/v1
         kind: Route
-        name: my-app-backend
+        name: my-frontend
         namespace: my-app-project
       register: route_info
 

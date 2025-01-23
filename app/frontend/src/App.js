@@ -5,16 +5,17 @@ import logo from './assets/logo_neu.png';  // Importiere das Bild
 
 function App() {
   const [todos, setTodos] = useState([]);
+  const apiBaseUrl = process.env.REACT_APP_API_BASE_URL || "http://localhost:3000";
 
   // Fetch initial data from backend
   useEffect(() => {
-    fetch("http://localhost:5000/api/todos")
+    fetch(`${apiBaseUrl}/api/todos`)
       .then((response) => response.json())
       .then((data) => setTodos(data));
   }, []);
 
   const addTodo = (todo) => {
-    fetch("http://localhost:5000/api/todos", {
+    fetch(`${apiBaseUrl}/api/todos`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(todo),
@@ -24,7 +25,7 @@ function App() {
   };
 
   const deleteTodo = (id) => {
-    fetch(`http://localhost:5000/api/todos/${id}`, {
+    fetch(`${apiBaseUrl}/api/todos/${id}`, {
       method: "DELETE",
     }).then(() => setTodos(todos.filter((todo) => todo.id !== id)));
   };

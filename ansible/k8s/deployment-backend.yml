@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  namespace: my-app-project
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+        deployment: backend
+    spec:
+      containers:
+        - name: backend
+          image: >-
+            quay.io/markus_roth/automation/backend:1.0
+          ports:
+            - containerPort: 5000
